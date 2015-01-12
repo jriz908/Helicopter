@@ -1,0 +1,294 @@
+
+<html>
+
+<head>
+<title>More Obstacles</title>
+
+
+<script type="text/javascript" src="https://d14to6y4nub5k1.cloudfront.net/local/jquery.min.js"></script>
+<script type="text/javascript" src="https://d14to6y4nub5k1.cloudfront.net/lib/codehs/library_live.js"></script>
+
+
+<style>
+canvas{
+    border: 1px solid black;
+}
+</style>
+
+</head>
+
+<body>
+<h1>More Obstacles</h1>
+
+<div id="user-code" style="display:none;">
+var DELAY = 40;
+var SPEED = 5;
+
+var OBSTACLE_WIDTH = 40;
+var OBSTACLE_HEIGHT = 120;
+
+var TERRAIN_WIDTH = 10;
+var MIN_TERRAIN_HEIGHT = 20;
+var MAX_TERRAIN_HEIGHT = 50;
+
+var DUST_RADIUS = 3;
+var DUST_BUFFER = 10;
+
+var NUM_OBSTACLES = 3;
+
+var copter;
+var dy = 0;
+var obstacles = [];
+
+var points = 0;
+var score; //text you see on screen
+var POINTS_PER_ROUND = 5;
+
+var clicking = false;
+var MAX_DY = 12;
+
+var top_terrain = [];
+var bot_terrain = [];
+var dust = [];
+
+
+function start(){
+	setup();
+	setTimer(game, DELAY);
+	mouseDownMethod(onMouseDown);
+	mouseUpMethod(onMouseUp);
+}
+
+function setup(){
+    setBackgroundColor(Color.black);
+    copter = new WebImage("heli.png");
+	copter.setSize(50,25);
+    copter.setPosition(getWidth()/3, getHeight()/2);
+    copter.setColor(Color.blue);
+    add(copter);
+
+    addObstacles();
+    addTerrain();
+	
+	score = new Text("0");
+	score.setColor(Color.white);
+	score.setPosition(10,30);
+	add(score);
+}
+
+function game(){
+    
+	updateScore();
+	
+    if(hitWall()){
+        lose();
+        return;
+    }
+    
+    var collider = getCollider();
+    if(collider != null){
+        lose();
+        return;
+    }
+    
+    if(clicking){
+        dy -= 1;
+        if(dy < -MAX_DY){
+            dy = -MAX_DY;
+        }
+    }else{
+        dy += 1;
+        if(dy > MAX_DY){
+            dy = MAX_DY;
+        }
+    }
+    
+    copter.move(0, dy);
+    
+    moveObstacles();
+    
+    
+	
+	moveTerrain();
+	moveDust();
+	addDust();
+	
+	
+	
+}
+
+function moveObstacles(){
+
+	for(var i = 0; i <  NUM_OBSTACLES; i++){
+		var obstacle = obstacles[i];
+		obstacle.move(-SPEED, 0);
+    
+		if(obstacle.getX() < -OBSTACLE_WIDTH){
+			obstacle.setPosition(getWidth(), Randomizer.nextInt(0, getHeight() - OBSTACLE_HEIGHT));
+		
+		}
+	}
+
+}
+
+
+function updateScore(){
+	points += POINTS_PER_ROUND;
+	score.setText(points);
+}
+
+function onMouseDown(e){
+    clicking = true;
+}
+
+function onMouseUp(e){
+    clicking = false;
+}
+
+function addObstacles(){
+    for(var i = 0; i < NUM_OBSTACLES; i++){
+		var obstacle = new Rectangle(OBSTACLE_WIDTH, OBSTACLE_HEIGHT);
+		obstacle.setPosition(getWidth() + i*(getWidth()/NUM_OBSTACLES), Randomizer.nextInt(0, getHeight() - OBSTACLE_HEIGHT));
+		obstacle.setColor(Color.green);
+		obstacles.push(obstacle);
+		add(obstacle);
+	}	
+}
+
+function hitWall(){
+    var hit_top = copter.getY() < 0;
+    var hit_bottom = copter.getY() - copter.getHeight() > getHeight();
+    return hit_top || hit_bottom;
+}
+
+
+function lose(){
+    stopTimer(game);
+    var text = new Text("You Lose!");
+    text.setColor(Color.red);
+    text.setPosition(getWidth()/2 - text.getWidth()/2, getHeight()/2);
+    add(text);
+}
+
+function getCollider(){
+    
+    var topLeft = getElementAt(copter.getX() - 1, copter.getY() - 1);
+    
+    if(topLeft != null){
+        return topLeft;
+    }
+    
+    var topRight = getElementAt(copter.getX() + copter.getWidth() + 1, copter.getY() - 1);
+    
+    if(topRight != null){
+        return topRight;
+    }
+    
+    var bottomLeft = getElementAt(copter.getX() - 1, copter.getY() + copter.getHeight() + 1);
+    
+    if(bottomLeft != null){
+        return bottomLeft;
+    }
+    
+    var bottomRight = getElementAt(copter.getX() + copter.getWidth() + 1, 
+                                   copter.getY() + copter.getHeight() + 1);
+    
+    if(bottomRight != null){
+        return bottomRight;
+    }
+    
+    return null;
+    
+    
+}
+
+function addTerrain(){
+    for(var i = 0; i <= getWidth()/TERRAIN_WIDTH; i++){
+        var height = Randomizer.nextInt(MIN_TERRAIN_HEIGHT, MAX_TERRAIN_HEIGHT);
+        var terrain = new Rectangle(TERRAIN_WIDTH, height);
+        terrain.setColor(Color.green);
+        terrain.setPosition(i*TERRAIN_WIDTH,0);
+        add(terrain);
+		top_terrain.push(terrain);
+        
+        height = Randomizer.nextInt(MIN_TERRAIN_HEIGHT, MAX_TERRAIN_HEIGHT);
+        var bottomTerrain = new Rectangle(TERRAIN_WIDTH, height);
+        bottomTerrain.setColor(Color.green);
+        bottomTerrain.setPosition(i*TERRAIN_WIDTH,getHeight() - bottomTerrain.getHeight());
+        add(bottomTerrain);
+		bot_terrain.push(bottomTerrain);
+        
+        
+        
+    }
+}
+
+function moveTerrain(){
+	for(var i = 0; i < top_terrain.length; i++){
+		
+		
+		var obj = top_terrain[i];
+		obj.move(-SPEED, 0);
+		
+		if(obj.getX() < -obj.getWidth()){
+			obj.setPosition(getWidth(),0);
+		}
+		
+	}
+	
+	for(var i = 0; i < top_terrain.length; i++){
+		var obj = bot_terrain[i];
+		obj.move(-SPEED, 0);
+		
+		if(obj.getX() < -obj.getWidth()){
+			obj.setPosition(getWidth(), getHeight() - obj.getHeight());
+		}
+		
+	}
+	
+}
+
+function addDust(){
+
+	var d = new Circle(DUST_RADIUS);
+	d.setColor("#cccccc");
+	d.setPosition(copter.getX() - d.getWidth(),
+					copter.getY() + DUST_BUFFER);
+	dust.push(d);				
+	add(d);
+	
+
+}
+
+function moveDust(){
+	for(var i = 0; i < dust.length; i++){
+		var d = dust[i];
+		d.move(-SPEED, 0);
+		d.setRadius(d.getRadius() - 0.1);
+		if(d.getX() < 0){
+			remove(d);
+			dust.remove(i);
+			i--;
+		}	
+	}
+	
+}
+
+</div>
+
+<canvas 
+width="400"
+height="500"
+class="codehs-editor-canvas"></canvas>
+
+<script>
+var g = new CodeHSGraphics({
+    canvas: $('.codehs-editor-canvas')
+});
+// run test # here.
+g.runCode($("#user-code").text());
+
+</script>
+
+</body>
+</html>
